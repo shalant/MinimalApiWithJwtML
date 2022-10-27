@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.OpenApi.Models;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,6 +64,21 @@ builder.Services.AddSwaggerGen(options => {
     options.SwaggerDoc("v1", info);
     options.AddSecurityDefinition("Bearer", securityScheme);
     options.AddSecurityRequirement(securityRequirements);
+});
+
+builder.Services.AddAuthentication(options => {
+    options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
+    options.DefaultScheme = JwtBearerDefaults.AuthenticationScheme;
+}).AddJwtBearer (options => {
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+        ValidateIssuer = true,
+        ValidIssuer = builder.Configuration["Jwt: Issuer"],
+        ValidAudience = builder.Configuration["Jwt: Audience"],
+        ValidateAudience = true,
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.getBytes(builder.Configuration["Jwt: Key"]))
+    };
 });
 
 // builder.Services.AddSingleton<ItemRepository>();

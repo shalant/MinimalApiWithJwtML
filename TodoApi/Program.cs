@@ -1,4 +1,60 @@
-var app = WebApplication.CreateBuilder(args).Build();
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+var builder = WebApplication.CreateBuilder(args);
+
+var connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
+builder.Services.AddDbContext<ApiDbContext>(options =>
+    options.UseSqlite(connectionString));
+
+builder.Services.AddSingleton<ItemRepository>();
+var app = builder.Build();
+
+app.MapGet("/items", ([FromServices] ItemRepository items) =>
+{
+    return items.GetAll();
+});
+
+app.MapPost("/items", ([FromServices] ItemRepository items, Item item) =>
+{
+    if (items.GetById(item.id) != null)
+    {
+        return Results.BadRequest();
+    }
+
+    items.Add(item);
+    return Results.Created($"/Items/{item.id}", item);
+});
+
+app.MapGet("/items/{id}", ([FromServices] ItemRepository items, int id) =>
+{
+    var item = items.GetById(id);
+
+    return item == null ? Results.NotFound() : Results.Ok(item);
+});
+
+app.MapPut("/items/{id}", ([FromServices] ItemRepository items, int id, Item item) =>
+{
+    if (items.GetById(id) == null)
+    {
+        return Results.NotFound();
+    }
+
+    items.Update(item);
+    return Results.Ok(item);
+});
+
+app.MapDelete("/items/{id}", ([FromServices] ItemRepository items, int id) =>
+{
+    if (items.GetById(id) == null)
+    {
+        return Results.NotFound();
+    }
+
+    items.Delete(id);
+    return Results.NoContent();
+});
+
 app.MapGet("/", () => "Hello from Minimal API");
 app.Run();
 
@@ -8,11 +64,11 @@ class ItemRepository
 {
     private Dictionary<int, Item> items = new Dictionary<int, Item>();
 
-    public ItemRepository() 
+    public ItemRepository()
     {
         var item1 = new Item(1, "Go to the gym", false);
-        var item2 = new Item(1, "Drink water", true);
-        var item3 = new Item(1, "Watch TV", false);
+        var item2 = new Item(2, "Drink water", true);
+        var item3 = new Item(3, "Watch TV", false);
 
         items.Add(item1.id, item1);
         items.Add(item2.id, item2);
@@ -21,11 +77,28 @@ class ItemRepository
 
     public IEnumerable<Item> GetAll() => items.Values;
 
-    public Item GetById(int id) => items[id];
+    public Item GetById(int id)
+    {
+        if (items.ContainsKey(id))
+        {
+            return items[id];
+        }
+        return null;
+    }
 
     public void Add(Item item) => items.Add(item.id, item);
 
     public void Update(Item item) => items[item.id] = item;
 
     public void Delete(int id) => items.Remove(id);
+}
+
+class ApiDbContext : DbContext
+{
+    public DbSet<Item> Items {get;set;}
+
+    public ApiDbContext(DbContextOptions<ApiDbContext> options) : base(options)
+    {
+        
+    }
 }

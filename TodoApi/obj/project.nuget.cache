@@ -1,6 +1,6 @@
 {
   "version": 2,
-  "dgSpecHash": "3xvpPLQxPV5qdytj+fgZs46nIdbRjERhgy1wUs91S0Pk1JrKUXx4MNnylLvmzfdwaMk6eiTkckNLeU0CL7NwOA==",
+  "dgSpecHash": "w+RTFNORy7HUd9+7KYDaX18P2T8XLp10/2ckmqGwzr6yXg0zytYvkP13blry5zV6r3yM0WvLUXHIRBa5qQj7ag==",
   "success": true,
   "projectFilePath": "C:\\Users\\digdr\\Documents\\coding\\MinimalApiWithJwtML\\TodoApi\\TodoApi.csproj",
   "expectedPackageFiles": [

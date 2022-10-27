@@ -1,11 +1,67 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
 
 var connectionString = builder.Configuration["ConnectionStrings:DefaultConnection"];
 builder.Services.AddDbContext<ApiDbContext>(options =>
     options.UseSqlite(connectionString));
+
+var securityScheme = new OpenApiSecurityScheme()
+{
+    Name = "Authorization",
+    Type = SecuritySchemeType.ApiKey,
+    Scheme = "Bearer",
+    BearerFormat = "JWT",
+    In = ParameterLocation.Header,
+    Description = "JWT authentication for MinimalAPI"
+};
+
+var securityRequirements = new OpenApiSecurityRequirement()
+    {
+        {
+        new OpenApiSecurityScheme
+        {
+            Reference = new OpenApiReference
+            {
+                Type = ReferenceType.SecurityScheme,
+                Id = "Bearer"
+            }
+        },
+        new string[] {}
+        }
+
+    };
+
+var contactInfo = new OpenApiContact()
+{
+    Name = "Bob",
+    Email = "Bob",
+    Url = new Uri("https://mohammadlewand.com")
+};
+
+var license = new OpenApiLicense()
+{
+    Name = "Free license"
+};
+
+var info = new OpenApiInfo()
+{
+    Version = "V1",
+    Title = "Todo List Api with JWT Authentication",
+    Description = "Todo List Api with JWT Authentication",
+    Contact = contactInfo,
+    License = license
+};
+
+builder.Services.AddEndpointsApiExplorer();
+
+builder.Services.AddSwaggerGen(options => {
+    options.SwaggerDoc("v1", info);
+    options.AddSecurityDefinition("Bearer", securityScheme);
+    options.AddSecurityRequirement(securityRequirements);
+});
 
 // builder.Services.AddSingleton<ItemRepository>();
 var app = builder.Build();
@@ -37,7 +93,7 @@ app.MapGet("/items/{id}", async (ApiDbContext db, int Id) =>
 app.MapPut("/items/{id}", async (ApiDbContext db, int id, Item item) =>
 {
     var existItem = await db.Items.FirstOrDefaultAsync(x => x.Id == id);
-    if(existItem == null)
+    if (existItem == null)
     {
         return Results.BadRequest();
     }
@@ -52,7 +108,7 @@ app.MapPut("/items/{id}", async (ApiDbContext db, int id, Item item) =>
 app.MapDelete("/items/{id}", async (ApiDbContext db, int Id) =>
 {
     var existItem = await db.Items.FirstOrDefaultAsync(x => x.Id == Id);
-    if(existItem == null)
+    if (existItem == null)
     {
         return Results.BadRequest();
     }
@@ -62,13 +118,15 @@ app.MapDelete("/items/{id}", async (ApiDbContext db, int Id) =>
     return Results.NoContent();
 });
 
+app.UseSwagger();
+app.UseSwaggerUI();
 app.MapGet("/", () => "Hello from Minimal API");
 app.Run();
 
 class Item
 {
     public int Id { get; set; }
-    public string Title {get;set;}
+    public string Title { get; set; }
     public bool IsCompleted { get; set; }
 }
 
@@ -109,10 +167,10 @@ class Item
 
 class ApiDbContext : DbContext
 {
-    public DbSet<Item> Items {get;set;}
+    public DbSet<Item> Items { get; set; }
 
     public ApiDbContext(DbContextOptions<ApiDbContext> options) : base(options)
     {
-        
+
     }
 }

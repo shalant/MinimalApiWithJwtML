@@ -4,6 +4,9 @@ using Microsoft.OpenApi.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens;
+using System.Text;
+using Microsoft.AspNetCore.Authorization;
+using System.IdentityModel.Tokens.Jwt;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -77,9 +80,14 @@ builder.Services.AddAuthentication(options => {
         ValidIssuer = builder.Configuration["Jwt: Issuer"],
         ValidAudience = builder.Configuration["Jwt: Audience"],
         ValidateAudience = true,
-        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.getBytes(builder.Configuration["Jwt: Key"]))
+        IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt: Key"])),
+        ValidateLifetime = false, // in any other app other than demo, must be true
+        ValidateIssuerSigningKey = true
     };
 });
+
+builder.Services.AddAuthentication();
+builder.Services.AddAuthorization();
 
 // builder.Services.AddSingleton<ItemRepository>();
 var app = builder.Build();
@@ -136,11 +144,30 @@ app.MapDelete("/items/{id}", async (ApiDbContext db, int Id) =>
     return Results.NoContent();
 });
 
+app.MapPost("/accounts/login", [AllowAnonymous] (UserDto user) => {
+    if(user.username == "admin@mohamadlewand.com" && user.password == "Password123")
+    {
+        var secureKey = Encoding.UTF8.GetBytes(builder.Configuration["Jwt: Key"]);
+        var issuer = builder.Configuration["Jwt: Issuer"];
+        var audience = builder.Configuration["Jwt: Audience"];
+        var securityKey = new SymmetricSecurityKey[secureKey];
+        var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha512);
+
+        var jwtTokenHandler = new JwtSecurityTokenHandler();
+    }
+    return Results.Unauthorized();
+});
+
 app.UseSwagger();
 app.UseSwaggerUI();
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.MapGet("/", () => "Hello from Minimal API");
 app.Run();
 
+record UserDto (string username, string password);
 class Item
 {
     public int Id { get; set; }

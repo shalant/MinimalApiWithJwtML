@@ -7,6 +7,7 @@ using System.IdentityModel.Tokens;
 using System.Text;
 using Microsoft.AspNetCore.Authorization;
 using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -62,7 +63,6 @@ var info = new OpenApiInfo()
 };
 
 builder.Services.AddEndpointsApiExplorer();
-
 builder.Services.AddSwaggerGen(options => {
     options.SwaggerDoc("v1", info);
     options.AddSecurityDefinition("Bearer", securityScheme);
@@ -150,10 +150,28 @@ app.MapPost("/accounts/login", [AllowAnonymous] (UserDto user) => {
         var secureKey = Encoding.UTF8.GetBytes(builder.Configuration["Jwt: Key"]);
         var issuer = builder.Configuration["Jwt: Issuer"];
         var audience = builder.Configuration["Jwt: Audience"];
-        var securityKey = new SymmetricSecurityKey[secureKey];
+        var securityKey = new SymmetricSecurityKey(secureKey);
         var credentials = new SigningCredentials(securityKey, SecurityAlgorithms.HmacSha512);
 
         var jwtTokenHandler = new JwtSecurityTokenHandler();
+
+        var tokenDescriptor = new SecurityTokenDescriptor
+        {
+            Subject = new System.Security.Claims.ClaimsIdentity(new [] {
+                new Claim("Id", "1"),
+                new Claim(JwtRegisteredClaimNames.Sub, user.username),
+                new Claim(JwtRegisteredClaimNames.Email, user.username),
+                new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
+            }),
+            Expires = DateTime.Now.AddMinutes(5),
+            Audience = audience,
+            Issuer = issuer,
+            SigningCredentials = credentials
+        };
+
+        var token = jwtTokenHandler.CreateToken(tokenDescriptor);
+        var jwtToken = jwtTokenHandler.WriteToken(token);
+        return Results.Ok(jwtToken);
     }
     return Results.Unauthorized();
 });
